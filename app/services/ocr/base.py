@@ -1,8 +1,13 @@
-from abc import ABC, abstractmethod
+from __future__ import annotations
+
+from typing import Protocol
+
+import numpy as np
 
 
-class OCREngine(ABC):
-    @abstractmethod
-    def extract_text(self, file_bytes: bytes) -> str:
-        """Extract text content from an image-like input."""
-        raise NotImplementedError
+class IOcrEngine(Protocol):
+    """Protocol describing OCR engines."""
+
+    def run(self, image: np.ndarray) -> tuple[str, float]:
+        """Run OCR on a BGR image and return text with average confidence."""
+

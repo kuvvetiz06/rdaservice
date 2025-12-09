@@ -4,7 +4,7 @@ from app.domain.models import ExtractionResponse
 from app.services.pipeline import ExtractionPipeline
 from app.services.regex_extractor import RegexExtractor
 from app.services.text_extractor import TextExtractor
-from app.services.ocr.tesseract_engine import TesseractEngine
+from app.services.ocr.tesseract_engine import TesseractOcrEngine
 from app.services.llm.ollama_client import OllamaClient
 from app.services.merger import ResultMerger
 
@@ -21,7 +21,7 @@ async def extract_contract(file: UploadFile = File(...)) -> ExtractionResponse:
 
     pipeline = ExtractionPipeline(
         text_extractor=TextExtractor(),
-        ocr_engine=TesseractEngine(),
+        ocr_engine=TesseractOcrEngine(),
         regex_extractor=RegexExtractor(),
         llm_client=OllamaClient(),
         merger=ResultMerger(),

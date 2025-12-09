@@ -1,7 +1,9 @@
-from app.services.ocr.base import OCREngine
+from typing import Any
+
+from app.services.ocr.base import IOcrEngine
 
 
-class PaddleOCREngine(OCREngine):  # pragma: no cover - placeholder
-    def extract_text(self, file_bytes: bytes) -> str:
+class PaddleOCREngine(IOcrEngine):  # pragma: no cover - placeholder
+    def run(self, image: Any) -> tuple[str, float]:  # type: ignore[override]
         """Placeholder for future PaddleOCR integration."""
-        return ""
+        return "", 0.0

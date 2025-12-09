@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from app.domain.models import ExtractionResult, FieldResult
-from app.services.ocr.base import OCREngine
+from app.services.ocr.base import IOcrEngine
 from app.services.regex_extractor import RegexExtractor
 from app.services.llm.base import LLMClient
 from app.services.merger import ResultMerger
@@ -12,7 +12,7 @@ from app.services.text_extractor import TextExtractor
 @dataclass
 class PipelineDependencies:
     text_extractor: TextExtractor
-    ocr_engine: OCREngine
+    ocr_engine: IOcrEngine
     regex_extractor: RegexExtractor
     llm_client: LLMClient
     merger: ResultMerger
@@ -22,7 +22,7 @@ class ExtractionPipeline:
     def __init__(
         self,
         text_extractor: TextExtractor,
-        ocr_engine: OCREngine,
+        ocr_engine: IOcrEngine,
         regex_extractor: RegexExtractor,
         llm_client: LLMClient,
         merger: ResultMerger,

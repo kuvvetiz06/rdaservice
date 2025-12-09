@@ -4,6 +4,14 @@ import io
 import logging
 from typing import Optional
 
+import numpy as np
+import cv2
+
+try:
+    from pdf2image import convert_from_bytes
+except ImportError:  # pragma: no cover - optional dependency guard
+    convert_from_bytes = None
+
 try:
     import pdfplumber
 except ImportError:  # pragma: no cover - optional dependency guard
@@ -13,7 +21,7 @@ try:
     from pypdf import PdfReader
 except ImportError:  # pragma: no cover - optional dependency guard
     PdfReader = None
-from app.services.ocr.base import OCREngine
+from app.services.ocr.base import IOcrEngine
 
 
 LOGGER = logging.getLogger(__name__)
@@ -24,7 +32,7 @@ class TextExtractor:
 
     KEYWORDS = ["kira", "kiracı", "kiralayan", "tl", "mahal"]
 
-    def __init__(self, ocr_engine: Optional[OCREngine] = None) -> None:
+    def __init__(self, ocr_engine: Optional[IOcrEngine] = None) -> None:
         self.ocr_engine = ocr_engine
 
     @staticmethod
@@ -65,12 +73,37 @@ class TextExtractor:
             return False
         return any(keyword in content for keyword in self.KEYWORDS)
 
-    def _extract_via_ocr(self, file_bytes: bytes) -> tuple[str, Optional[float], str]:
+    @staticmethod
+    def _load_image(file_bytes: bytes) -> Optional[np.ndarray]:
+        if not file_bytes:
+            return None
+        np_bytes = np.frombuffer(file_bytes, np.uint8)
+        image = cv2.imdecode(np_bytes, cv2.IMREAD_COLOR)
+        return image
+
+    @staticmethod
+    def _load_pdf_page(file_bytes: bytes, dpi: int = 400) -> Optional[np.ndarray]:
+        if not convert_from_bytes:
+            LOGGER.warning("pdf2image is not available; skipping OCR fallback for PDF")
+            return None
+        try:
+            pages = convert_from_bytes(file_bytes, dpi=dpi)
+        except Exception as exc:  # pragma: no cover - library level issues
+            LOGGER.warning("Failed to convert PDF to image for OCR fallback: %s", exc)
+            return None
+        if not pages:
+            return None
+        first_page = pages[0].convert("RGB")
+        return cv2.cvtColor(np.array(first_page), cv2.COLOR_RGB2BGR)
+
+    def _extract_via_ocr(self, image: Optional[np.ndarray]) -> tuple[str, Optional[float], str]:
         if not self.ocr_engine:
             LOGGER.warning("OCR engine is not configured; returning empty text from OCR fallback")
             return "", None, "ocr"
-        text = self.ocr_engine.extract_text(file_bytes)
-        confidence = getattr(self.ocr_engine, "confidence", None)
+        if image is None:
+            LOGGER.warning("No image available for OCR fallback; returning empty text")
+            return "", None, "ocr"
+        text, confidence = self.ocr_engine.run(image)
         return text, confidence, "ocr"
 
     def extract_text(self, file_bytes: bytes, document_type: str) -> tuple[str, Optional[float], str]:
@@ -79,7 +112,7 @@ class TextExtractor:
         if not file_bytes:
             if extension.endswith(".txt") or extension.endswith(".md"):
                 return "", None, "native"
-            return self._extract_via_ocr(file_bytes)
+            return self._extract_via_ocr(None)
 
         if extension.endswith(".txt") or extension.endswith(".md"):
             return self._decode_text(file_bytes), None, "native"
@@ -94,7 +127,9 @@ class TextExtractor:
             if text and self._is_native_valid(text):
                 return text, None, "native"
 
-            return self._extract_via_ocr(file_bytes)
+            image = self._load_pdf_page(file_bytes)
+            return self._extract_via_ocr(image)
 
         # For image-like inputs, rely on OCR directly
-        return self._extract_via_ocr(file_bytes)
+        image = self._load_image(file_bytes)
+        return self._extract_via_ocr(image)
