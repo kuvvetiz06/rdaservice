@@ -17,6 +17,8 @@ LOGGER = logging.getLogger(__name__)
 class TesseractEngine(OCREngine):
     def __init__(self, language: Optional[str] = None) -> None:
         settings = get_settings()
+        if settings.tesseract_cmd:
+            pytesseract.pytesseract.tesseract_cmd = settings.tesseract_cmd
         self.language = language or settings.tesseract_lang
 
     def extract_text(self, file_bytes: bytes) -> str:  # pragma: no cover - requires binary

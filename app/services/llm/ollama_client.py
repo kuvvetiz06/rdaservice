@@ -13,10 +13,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 class OllamaClient(LLMClient):
-    def __init__(self, model: Optional[str] = None, endpoint: str = "http://localhost:11434") -> None:
+    def __init__(self, model: Optional[str] = None, endpoint: Optional[str] = None) -> None:
         settings = get_settings()
         self.model = model or settings.ollama_model
-        self.endpoint = endpoint
+        self.endpoint = endpoint or settings.ollama_base_url
 
     def _build_prompt(self, raw_text: str, existing_fields: Dict[str, Optional[str]]) -> str:
         missing_fields = [
