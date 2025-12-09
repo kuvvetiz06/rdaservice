@@ -31,8 +31,11 @@ def test_pipeline_merges_regex_and_llm_results():
     )
 
     result: ExtractionResult = pipeline.run(b"", filename="contract.pdf")
+    field_map = {field.name: field for field in result.fields}
 
-    assert result.fields["Mahal_Kodu"] == "OCR123"
-    assert result.fields["Asgari_Kira"] == "5000"
-    assert result.fields["M2"] == "120"
-    assert result.fields["Ciro_Kira_Orani"] == "8%"
+    assert result.document_type == "contract.pdf"
+    assert result.ocr_engine == "DummyOCREngine"
+    assert field_map["Mahal_Kodu"].value == "OCR123"
+    assert field_map["Asgari_Kira"].value == "5000"
+    assert field_map["M2"].value == "120"
+    assert field_map["Ciro_Kira_Orani"].value == "8%"

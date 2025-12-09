@@ -1,6 +1,6 @@
-from typing import Dict, Optional
+from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 TARGET_FIELDS = [
@@ -17,16 +17,17 @@ TARGET_FIELDS = [
 ]
 
 
+class FieldResult(BaseModel):
+    name: str
+    value: Optional[str]
+    confidence: float
+    source_quote: Optional[str]
+    source: Literal["regex", "llm", "merged"]
+
+
 class ExtractionResult(BaseModel):
-    raw_text: str = Field(..., description="Extracted text content")
-    fields: Dict[str, Optional[str]] = Field(
-        default_factory=dict, description="Structured contract information"
-    )
-
-
-class ExtractionResponse(ExtractionResult):
-    """Alias for FastAPI response model."""
-
-
-class RegexExtractionResult(BaseModel):
-    fields: Dict[str, Optional[str]]
+    document_type: str
+    ocr_engine: Optional[str]
+    ocr_confidence: Optional[float]
+    fields: list[FieldResult]
+    raw_text: str
