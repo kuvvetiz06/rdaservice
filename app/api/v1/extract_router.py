@@ -1,31 +1,25 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
-from app.domain.models import ExtractionResponse
-from app.services.pipeline import ExtractionPipeline
-from app.services.regex_extractor import RegexExtractor
-from app.services.text_extractor import TextExtractor
-from app.services.ocr.tesseract_engine import TesseractOcrEngine
-from app.services.llm.ollama_client import OllamaClient
-from app.services.merger import ResultMerger
+from app.domain.models import ExtractionResult
+from app.services.pipeline import run_extraction
 
 
 router = APIRouter(prefix="/extract", tags=["extract"])
 
 
-@router.post("/", response_model=ExtractionResponse)
-async def extract_contract(file: UploadFile = File(...)) -> ExtractionResponse:
+@router.post("/", response_model=ExtractionResult)
+async def extract_contract(
+    file: UploadFile = File(...),
+    document_type: str = Query("kira_sozlesmesi"),
+    document_type_body: str | None = Form(None),
+) -> ExtractionResult:
     try:
         file_bytes = await file.read()
     except Exception as exc:  # pragma: no cover - FastAPI handles exceptions
         raise HTTPException(status_code=400, detail="Invalid file upload") from exc
 
-    pipeline = ExtractionPipeline(
-        text_extractor=TextExtractor(),
-        ocr_engine=TesseractOcrEngine(),
-        regex_extractor=RegexExtractor(),
-        llm_client=OllamaClient(),
-        merger=ResultMerger(),
-    )
+    selected_document_type = document_type_body or document_type
 
-    result = pipeline.run(file_bytes=file_bytes, filename=file.filename)
-    return ExtractionResponse(raw_text=result.raw_text, fields=result.fields)
+    return run_extraction(
+        file_bytes=file_bytes, document_type=selected_document_type
+    )
