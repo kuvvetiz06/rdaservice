@@ -1,7 +1,7 @@
 import re
 from typing import Dict, Optional
 
-from app.domain.models import TARGET_FIELDS
+from app.domain.models import TARGET_FIELDS, FieldResult
 
 
 class RegexExtractor:
@@ -34,4 +34,22 @@ class RegexExtractor:
             match = pattern.search(text)
             if match:
                 results[key] = match.group("value").strip()
+        return results
+
+    def extract_by_regex(self, text: str) -> dict[str, FieldResult]:
+        results: dict[str, FieldResult] = {}
+        for name, pattern in self.patterns.items():
+            match = pattern.search(text)
+            if not match:
+                continue
+
+            value = match.group("value").strip()
+            results[name] = FieldResult(
+                name=name,
+                value=value,
+                confidence=0.95,
+                source_quote=match.group(0).strip(),
+                source="regex",
+            )
+
         return results
