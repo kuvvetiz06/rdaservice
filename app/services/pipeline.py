@@ -3,8 +3,10 @@ from typing import Optional
 
 from app.domain.models import ExtractionResult, FieldResult
 from app.services.ocr.base import IOcrEngine
+from app.services.ocr.tesseract_engine import TesseractOcrEngine
 from app.services.regex_extractor import RegexExtractor
 from app.services.llm.base import ILlmClient
+from app.services.llm.ollama_client import OllamaLlmClient
 from app.services.merger import ResultMerger
 from app.services.text_extractor import TextExtractor
 
@@ -83,3 +85,52 @@ class ExtractionPipeline:
             )
 
         return results
+
+
+def _is_text_meaningful(raw_text: str) -> bool:
+    content = raw_text.strip().lower()
+    if len(content) < 50:
+        return False
+
+    keywords = ("kira", "tl", "mahal")
+    return any(keyword in content for keyword in keywords)
+
+
+def run_extraction(file_bytes: bytes, document_type: str) -> ExtractionResult:
+    text_extractor = TextExtractor(ocr_engine=TesseractOcrEngine())
+    raw_text, ocr_conf, text_source = text_extractor.extract_text(file_bytes, document_type)
+
+    if not _is_text_meaningful(raw_text):
+        return ExtractionResult(
+            document_type=document_type,
+            ocr_engine=(
+                text_extractor.ocr_engine.__class__.__name__
+                if text_source == "ocr" and text_extractor.ocr_engine
+                else None
+            ),
+            ocr_confidence=ocr_conf,
+            fields=[],
+            raw_text=raw_text,
+        )
+
+    regex_extractor = RegexExtractor()
+    regex_fields = regex_extractor.extract_by_regex(raw_text)
+
+    llm_client = OllamaLlmClient()
+    llm_fields_raw = llm_client.extract_fields(raw_text, document_type)
+    llm_fields = ExtractionPipeline._to_field_results(llm_fields_raw)
+
+    merger = ResultMerger()
+    merged_fields = merger.merge_fields(regex_fields, llm_fields)
+
+    return ExtractionResult(
+        document_type=document_type,
+        ocr_engine=(
+            text_extractor.ocr_engine.__class__.__name__
+            if text_source == "ocr" and text_extractor.ocr_engine
+            else None
+        ),
+        ocr_confidence=ocr_conf,
+        fields=list(merged_fields.values()),
+        raw_text=raw_text,
+    )
