@@ -6,7 +6,7 @@ from app.core.logging import configure_logging
 
 configure_logging()
 app = FastAPI(title="RDA Service", version="0.1.0")
-app.include_router(extract_router, prefix="/api/v1")
+app.include_router(extract_router, prefix="/v1")
 
 
 @app.get("/health")
