@@ -96,9 +96,18 @@ def _is_text_meaningful(raw_text: str) -> bool:
     return any(keyword in content for keyword in keywords)
 
 
-def run_extraction(file_bytes: bytes, document_type: str) -> ExtractionResult:
+def run_extraction(
+    file_bytes: bytes,
+    document_type: str,
+    filename: str | None = None,
+) -> ExtractionResult:
     text_extractor = TextExtractor(ocr_engine=TesseractOcrEngine())
-    raw_text, ocr_conf, text_source = text_extractor.extract_text(file_bytes, document_type)
+
+    # filename varsa onu kullan, yoksa document_type’yi fallback yap
+    raw_text, ocr_conf, text_source = text_extractor.extract_text(
+        file_bytes, filename or document_type
+    )
+
     ocr_engine_name = (
         text_extractor.ocr_engine.__class__.__name__
         if text_source == "ocr" and text_extractor.ocr_engine
@@ -131,3 +140,4 @@ def run_extraction(file_bytes: bytes, document_type: str) -> ExtractionResult:
         fields=list(merged_fields.values()),
         raw_text=raw_text,
     )
+

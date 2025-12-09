@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     ollama_model: str = Field("llama3.1:8b", env="OLLAMA_MODEL")
     ocr_engine: str = Field("tesseract", env="OCR_ENGINE")
     tesseract_cmd: Optional[str] = Field(default=None, env="TESSERACT_CMD")
-    tesseract_lang: str = Field("eng", env="TESSERACT_LANG")
+    tesseract_lang: str = Field("tur+eng", env="TESSERACT_LANG")
 
     class Config:
         env_file = ".env"

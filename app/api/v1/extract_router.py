@@ -21,5 +21,7 @@ async def extract_contract(
     selected_document_type = document_type_body or document_type
 
     return run_extraction(
-        file_bytes=file_bytes, document_type=selected_document_type
-    )
+    file_bytes=file_bytes,
+    document_type=selected_document_type,
+    filename=file.filename,
+)

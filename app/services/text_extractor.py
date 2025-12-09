@@ -101,12 +101,8 @@ class TextExtractor:
             LOGGER.warning("OCR engine is not configured; returning empty text from OCR fallback")
             return "", None, "ocr"
         if image is None:
-            try:
-                text, confidence = self.ocr_engine.run(image)
-                return text, confidence, "ocr"
-            except Exception as exc:  # pragma: no cover - engine-specific behavior
-                LOGGER.warning("No image available for OCR fallback; returning empty text: %s", exc)
-                return "", None, "ocr"
+           LOGGER.warning("No image provided for OCR fallback; returning empty text")
+           return "", None, "ocr"
         text, confidence = self.ocr_engine.run(image)
         return text, confidence, "ocr"
 
