@@ -5,13 +5,13 @@ from app.services.merger import ResultMerger
 from app.services.pipeline import ExtractionPipeline
 from app.services.regex_extractor import RegexExtractor
 from app.services.text_extractor import TextExtractor
-from app.services.ocr.base import OCREngine
+from app.services.ocr.base import IOcrEngine
 from app.services.llm.base import LLMClient
 
 
-class DummyOCREngine(OCREngine):
-    def extract_text(self, file_bytes: bytes) -> str:
-        return "Mahal Kodu: OCR123\nAsgari Kira: 5000"
+class DummyOCREngine(IOcrEngine):
+    def run(self, image):  # type: ignore[override]
+        return "Mahal Kodu: OCR123\nAsgari Kira: 5000", 0.9
 
 
 class DummyLLMClient(LLMClient):
