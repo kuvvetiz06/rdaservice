@@ -4,7 +4,7 @@ from typing import Optional
 from app.domain.models import ExtractionResult, FieldResult
 from app.services.ocr.base import IOcrEngine
 from app.services.regex_extractor import RegexExtractor
-from app.services.llm.base import LLMClient
+from app.services.llm.base import ILlmClient
 from app.services.merger import ResultMerger
 from app.services.text_extractor import TextExtractor
 
@@ -14,7 +14,7 @@ class PipelineDependencies:
     text_extractor: TextExtractor
     ocr_engine: IOcrEngine
     regex_extractor: RegexExtractor
-    llm_client: LLMClient
+    llm_client: ILlmClient
     merger: ResultMerger
 
 
@@ -24,7 +24,7 @@ class ExtractionPipeline:
         text_extractor: TextExtractor,
         ocr_engine: IOcrEngine,
         regex_extractor: RegexExtractor,
-        llm_client: LLMClient,
+        llm_client: ILlmClient,
         merger: ResultMerger,
     ) -> None:
         self.deps = PipelineDependencies(
@@ -49,17 +49,19 @@ class ExtractionPipeline:
         raw_text, ocr_confidence, source = self._extract_text(file_bytes, filename)
         used_ocr = source == "ocr"
         regex_fields = self.deps.regex_extractor.extract(raw_text)
-        llm_fields = self.deps.llm_client.generate_fields(raw_text, regex_fields)
+        llm_fields = self.deps.llm_client.extract_fields(
+            raw_text, filename or "kira sözleşmesi"
+        )
         merged_fields = self.deps.merger.merge(regex_fields, llm_fields)
         field_results = [
             FieldResult(
                 name=name,
-                value=value,
-                confidence=1.0,
-                source_quote=None,
-                source="merged",
+                value=field_data.get("value"),
+                confidence=float(field_data.get("confidence", 0.0)),
+                source_quote=field_data.get("source_quote"),
+                source=field_data.get("source", "merged"),
             )
-            for name, value in merged_fields.items()
+            for name, field_data in merged_fields.items()
         ]
         return ExtractionResult(
             document_type=filename or "unknown",

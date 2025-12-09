@@ -1,11 +1,9 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from __future__ import annotations
+
+from typing import Protocol
 
 
-class LLMClient(ABC):
-    @abstractmethod
-    def generate_fields(
-        self, raw_text: str, existing_fields: Dict[str, Optional[str]]
-    ) -> Dict[str, Optional[str]]:
-        """Generate structured data from text."""
-        raise NotImplementedError
+class ILlmClient(Protocol):
+    def extract_fields(self, raw_text: str, document_type: str) -> dict:
+        """Extract structured fields from raw text."""
+

@@ -6,7 +6,7 @@ from app.services.pipeline import ExtractionPipeline
 from app.services.regex_extractor import RegexExtractor
 from app.services.text_extractor import TextExtractor
 from app.services.ocr.base import IOcrEngine
-from app.services.llm.base import LLMClient
+from app.services.llm.base import ILlmClient
 
 
 class DummyOCREngine(IOcrEngine):
@@ -14,11 +14,16 @@ class DummyOCREngine(IOcrEngine):
         return "Mahal Kodu: OCR123\nAsgari Kira: 5000", 0.9
 
 
-class DummyLLMClient(LLMClient):
-    def generate_fields(
-        self, raw_text: str, existing_fields: Dict[str, Optional[str]]
-    ) -> Dict[str, Optional[str]]:
-        return {"M2": "120", "Ciro_Kira_Orani": "8%"}
+class DummyLLMClient(ILlmClient):
+    def extract_fields(self, raw_text: str, document_type: str) -> Dict[str, dict]:
+        return {
+            "M2": {"value": "120", "confidence": 0.7, "source_quote": "M2 120"},
+            "Ciro_Kira_Orani": {
+                "value": "8%",
+                "confidence": 0.65,
+                "source_quote": "Ciro kira oranı %8",
+            },
+        }
 
 
 def test_pipeline_merges_regex_and_llm_results():
@@ -36,6 +41,10 @@ def test_pipeline_merges_regex_and_llm_results():
     assert result.document_type == "contract.pdf"
     assert result.ocr_engine == "DummyOCREngine"
     assert field_map["Mahal_Kodu"].value == "OCR123"
+    assert field_map["Mahal_Kodu"].source == "regex"
     assert field_map["Asgari_Kira"].value == "5000"
+    assert field_map["Asgari_Kira"].source == "regex"
     assert field_map["M2"].value == "120"
+    assert field_map["M2"].source == "llm"
     assert field_map["Ciro_Kira_Orani"].value == "8%"
+    assert field_map["Ciro_Kira_Orani"].source == "llm"
