@@ -48,21 +48,13 @@ class ExtractionPipeline:
     def run(self, file_bytes: bytes, filename: Optional[str] = None) -> ExtractionResult:
         raw_text, ocr_confidence, source = self._extract_text(file_bytes, filename)
         used_ocr = source == "ocr"
-        regex_fields = self.deps.regex_extractor.extract(raw_text)
-        llm_fields = self.deps.llm_client.extract_fields(
+        regex_fields = self.deps.regex_extractor.extract_by_regex(raw_text)
+        llm_fields_raw = self.deps.llm_client.extract_fields(
             raw_text, filename or "kira sözleşmesi"
         )
-        merged_fields = self.deps.merger.merge(regex_fields, llm_fields)
-        field_results = [
-            FieldResult(
-                name=name,
-                value=field_data.get("value"),
-                confidence=float(field_data.get("confidence", 0.0)),
-                source_quote=field_data.get("source_quote"),
-                source=field_data.get("source", "merged"),
-            )
-            for name, field_data in merged_fields.items()
-        ]
+        llm_fields = self._to_field_results(llm_fields_raw)
+        merged_fields = self.deps.merger.merge_fields(regex_fields, llm_fields)
+        field_results = list(merged_fields.values())
         return ExtractionResult(
             document_type=filename or "unknown",
             ocr_engine=self.deps.ocr_engine.__class__.__name__ if used_ocr else None,
@@ -70,3 +62,24 @@ class ExtractionPipeline:
             fields=field_results,
             raw_text=raw_text,
         )
+
+    @staticmethod
+    def _to_field_results(fields: dict) -> dict[str, FieldResult]:
+        results: dict[str, FieldResult] = {}
+        if not fields:
+            return results
+
+        for name, field in fields.items():
+            value = field.get("value") if isinstance(field, dict) else None
+            if value in (None, ""):
+                continue
+
+            results[name] = FieldResult(
+                name=name,
+                value=value,
+                confidence=float(field.get("confidence", 0.0)),
+                source_quote=field.get("source_quote"),
+                source="llm",
+            )
+
+        return results

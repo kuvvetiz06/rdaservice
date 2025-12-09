@@ -1,37 +1,26 @@
-from typing import Dict, Optional
-
-from app.domain.models import TARGET_FIELDS
+from app.domain.models import FieldResult
 
 
 class ResultMerger:
     @staticmethod
-    def merge(
-        regex_fields: Dict[str, Optional[str]],
-        llm_fields: Dict[str, dict],
-    ) -> Dict[str, dict]:
-        merged: Dict[str, dict] = {}
-        for field in TARGET_FIELDS:
-            regex_value = regex_fields.get(field)
-            llm_value = llm_fields.get(field, {}) if llm_fields else {}
-            if regex_value not in (None, ""):
-                merged[field] = {
-                    "value": regex_value,
-                    "confidence": 1.0,
-                    "source_quote": None,
-                    "source": "regex",
-                }
-            elif isinstance(llm_value, dict) and llm_value.get("value") not in (None, ""):
-                merged[field] = {
-                    "value": llm_value.get("value"),
-                    "confidence": float(llm_value.get("confidence", 0.0)),
-                    "source_quote": llm_value.get("source_quote"),
-                    "source": "llm",
-                }
-            else:
-                merged[field] = {
-                    "value": None,
-                    "confidence": 0.0,
-                    "source_quote": None,
-                    "source": "merged",
-                }
+    def merge_fields(
+        regex_fields: dict[str, FieldResult],
+        llm_fields: dict[str, FieldResult],
+    ) -> dict[str, FieldResult]:
+        merged: dict[str, FieldResult] = {}
+        all_fields = set(regex_fields.keys()) | set(llm_fields.keys())
+
+        for field_name in all_fields:
+            regex_field = regex_fields.get(field_name)
+            llm_field = llm_fields.get(field_name)
+
+            if (
+                regex_field
+                and regex_field.value not in (None, "")
+                and regex_field.confidence >= 0.9
+            ):
+                merged[field_name] = regex_field
+            elif llm_field and llm_field.value not in (None, ""):
+                merged[field_name] = llm_field
+
         return merged
