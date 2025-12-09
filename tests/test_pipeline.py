@@ -2,6 +2,7 @@ from typing import Dict, Optional
 
 from app.domain.models import ExtractionResult
 from app.services.merger import ResultMerger
+from app.services import pipeline
 from app.services.pipeline import ExtractionPipeline
 from app.services.regex_extractor import RegexExtractor
 from app.services.text_extractor import TextExtractor
@@ -48,3 +49,21 @@ def test_pipeline_merges_regex_and_llm_results():
     assert field_map["M2"].source == "llm"
     assert field_map["Ciro_Kira_Orani"].value == "8%"
     assert field_map["Ciro_Kira_Orani"].source == "llm"
+
+
+def test_run_extraction_smoke(monkeypatch):
+    class DummyTesseract:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def run(self, image):  # type: ignore[override]
+            return "", 0.0
+
+    monkeypatch.setattr(pipeline, "TesseractOcrEngine", DummyTesseract)
+
+    result = pipeline.run_extraction(b"", document_type="empty.pdf")
+
+    assert isinstance(result, ExtractionResult)
+    assert result.document_type == "empty.pdf"
+    assert result.fields == []
+    assert result.raw_text == ""
