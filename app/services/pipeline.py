@@ -99,15 +99,16 @@ def _is_text_meaningful(raw_text: str) -> bool:
 def run_extraction(file_bytes: bytes, document_type: str) -> ExtractionResult:
     text_extractor = TextExtractor(ocr_engine=TesseractOcrEngine())
     raw_text, ocr_conf, text_source = text_extractor.extract_text(file_bytes, document_type)
+    ocr_engine_name = (
+        text_extractor.ocr_engine.__class__.__name__
+        if text_source == "ocr" and text_extractor.ocr_engine
+        else None
+    )
 
     if not _is_text_meaningful(raw_text):
         return ExtractionResult(
             document_type=document_type,
-            ocr_engine=(
-                text_extractor.ocr_engine.__class__.__name__
-                if text_source == "ocr" and text_extractor.ocr_engine
-                else None
-            ),
+            ocr_engine=ocr_engine_name,
             ocr_confidence=ocr_conf,
             fields=[],
             raw_text=raw_text,
@@ -125,11 +126,7 @@ def run_extraction(file_bytes: bytes, document_type: str) -> ExtractionResult:
 
     return ExtractionResult(
         document_type=document_type,
-        ocr_engine=(
-            text_extractor.ocr_engine.__class__.__name__
-            if text_source == "ocr" and text_extractor.ocr_engine
-            else None
-        ),
+        ocr_engine=ocr_engine_name,
         ocr_confidence=ocr_conf,
         fields=list(merged_fields.values()),
         raw_text=raw_text,
